@@ -155,7 +155,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .sheet-panel-title {
@@ -204,12 +204,15 @@
   font-size: 12pt;
   letter-spacing: 0.06em;
   color: #111111;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sheet-vehicle-name {
   font-weight: 650;
   font-size: 10.5pt;
   color: #16202e;
+  min-width: 0;
 }
 
 .sheet-vehicle-grid {
@@ -225,7 +228,7 @@
 }
 
 .sheet-section {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .sheet-section h3 {
@@ -269,7 +272,7 @@ table.sheet-lines td.num {
 }
 
 table.sheet-lines td {
-  padding: 6px 8px;
+  padding: 5px 8px;
   border-bottom: 1px solid #e2e6ec;
   vertical-align: top;
 }
@@ -361,8 +364,8 @@ table.sheet-lines tbody tr:nth-child(even) td {
 }
 
 .sheet-terms {
-  margin-top: 18px;
-  padding-top: 10px;
+  margin-top: 12px;
+  padding-top: 8px;
   border-top: 1px solid #e2e6ec;
   font-size: 8.4pt;
   color: #6a7484;
@@ -373,7 +376,7 @@ table.sheet-lines tbody tr:nth-child(even) td {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 26px;
-  margin-top: 20px;
+  margin-top: 16px;
   font-size: 8.6pt;
   color: #6a7484;
 }
@@ -385,7 +388,7 @@ table.sheet-lines tbody tr:nth-child(even) td {
 }
 
 .sheet-footer-note {
-  margin-top: 16px;
+  margin-top: 12px;
   text-align: center;
   font-size: 8.4pt;
   color: #79838f;
