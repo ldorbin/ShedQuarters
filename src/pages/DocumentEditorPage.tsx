@@ -10,7 +10,7 @@ import {
   TrashIcon,
 } from "../components/Icons";
 import { TopBar } from "../components/Layout";
-import { LineItemsTable, newLineItem } from "../components/LineItemsTable";
+import { LineItemsTable } from "../components/LineItemsTable";
 import { MoneyInput } from "../components/MoneyInput";
 import {
   addDaysIso,
@@ -106,7 +106,7 @@ export function DocumentEditorPage() {
   useEffect(() => {
     if (!kind) return;
     if (!id) {
-      setDraft((current) => current ?? blankDocument(kind, settings));
+      setDraft((current) => current ?? blankDocument(kind, null));
       setLoading(false);
       return;
     }
@@ -130,18 +130,28 @@ export function DocumentEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, kind, settings]);
+  }, [id, kind]);
 
-  // Apply VAT defaults once settings arrive for a brand new document.
+  // Apply the business defaults once settings arrive, for a brand new document
+  // only. Deliberately not part of the loader effect above: re-running that
+  // when settings resolve would refetch and discard in-progress edits.
   useEffect(() => {
-    if (id || !settings || settingsApplied.current) return;
+    if (id || !kind || !settings || settingsApplied.current) return;
     settingsApplied.current = true;
     setDraft((current) =>
       current
-        ? { ...current, vatEnabled: settings.vatEnabled, vatRate: settings.vatRate }
+        ? {
+            ...current,
+            vatEnabled: settings.vatEnabled,
+            vatRate: settings.vatRate,
+            dueDate:
+              kind === "invoice"
+                ? addDaysIso(current.issueDate, settings.defaultPaymentTermsDays)
+                : current.dueDate,
+          }
         : current,
     );
-  }, [settings, id]);
+  }, [settings, id, kind]);
 
   useEffect(() => {
     if (draft && !baseline && !id) setBaseline(JSON.stringify(draft));
@@ -360,10 +370,10 @@ export function DocumentEditorPage() {
           type="button"
           className="btn btn-sm btn-primary"
           onClick={() => void save()}
-          disabled={saving || !dirty}
+          disabled={saving || (!dirty && Boolean(draft.id))}
         >
           <SaveIcon />
-          {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+          {saving ? "Saving…" : !draft.id || dirty ? "Save" : "Saved"}
         </button>
       </TopBar>
 
@@ -927,4 +937,3 @@ export function DocumentEditorPage() {
   );
 }
 
-export { newLineItem };
