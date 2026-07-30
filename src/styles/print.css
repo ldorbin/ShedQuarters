@@ -1,0 +1,466 @@
+/* A4 document rendering. Two jobs:
+   1. On screen, show a realistic paper preview.
+   2. On print (and for the html2canvas PDF capture), emit exactly the sheet
+      with none of the application chrome.
+   Colours here are deliberately plain hex — html2canvas cannot parse oklch(). */
+
+.print-screen {
+  min-height: 100vh;
+  background: #e9edf3;
+  padding: 0 0 60px;
+}
+
+.print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: #16202e;
+  color: #ffffff;
+  flex-wrap: wrap;
+}
+
+.print-toolbar .spacer {
+  margin-left: auto;
+}
+
+.print-toolbar .btn {
+  background: #24354a;
+  border-color: #3a4a5f;
+  color: #ffffff;
+}
+
+.print-toolbar .btn:hover:not(:disabled) {
+  background: #2f4560;
+  border-color: #4a5d76;
+}
+
+.print-toolbar .btn-primary {
+  background: #f0b429;
+  border-color: #d9a017;
+  color: #16202e;
+}
+
+.print-toolbar .btn-primary:hover:not(:disabled) {
+  background: #d9a017;
+  border-color: #d9a017;
+}
+
+.sheet-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 26px 16px 0;
+}
+
+/* 210mm x 297mm with a 12mm margin baked in as padding. */
+.sheet {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 12mm;
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: 0 8px 30px rgba(16, 24, 36, 0.22);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  box-sizing: border-box;
+}
+
+@media (max-width: 240mm) {
+  .sheet-wrap {
+    padding: 16px 8px 0;
+  }
+
+  .sheet {
+    width: 100%;
+    min-height: 0;
+    padding: 16px;
+  }
+}
+
+/* ------------------------------------------------------------- sheet parts */
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #16202e;
+}
+
+.sheet-logo {
+  max-width: 190px;
+  max-height: 68px;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sheet-business-name {
+  font-size: 17pt;
+  font-weight: 700;
+  color: #16202e;
+  letter-spacing: -0.01em;
+  margin: 0 0 3px;
+}
+
+.sheet-business-meta {
+  font-size: 8.8pt;
+  color: #55606f;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.sheet-doc-meta {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sheet-doc-title {
+  font-size: 21pt;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #16202e;
+  margin: 0 0 6px;
+}
+
+.sheet-doc-fields {
+  font-size: 9pt;
+  color: #333c4a;
+}
+
+.sheet-doc-fields div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.sheet-doc-fields span:first-child {
+  color: #6a7484;
+}
+
+.sheet-doc-fields strong {
+  min-width: 82px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 14px;
+}
+
+.sheet-panel-title {
+  font-size: 7.8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #79838f;
+  margin-bottom: 4px;
+}
+
+.sheet-customer-name {
+  font-weight: 700;
+  font-size: 11pt;
+  color: #16202e;
+}
+
+.sheet-address {
+  white-space: pre-line;
+  font-size: 9.2pt;
+  color: #3b4552;
+}
+
+.sheet-vehicle {
+  border: 1px solid #d5dbe4;
+  border-radius: 5px;
+  padding: 8px 10px;
+  background: #f7f9fc;
+}
+
+.sheet-vehicle-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 5px;
+}
+
+.sheet-reg {
+  display: inline-block;
+  background: #ffd307;
+  border: 1px solid #b99b18;
+  border-radius: 3px;
+  padding: 2px 9px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 700;
+  font-size: 12pt;
+  letter-spacing: 0.06em;
+  color: #111111;
+}
+
+.sheet-vehicle-name {
+  font-weight: 650;
+  font-size: 10.5pt;
+  color: #16202e;
+}
+
+.sheet-vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px 14px;
+  font-size: 8.8pt;
+  color: #4a5566;
+}
+
+.sheet-vehicle-grid span {
+  color: #79838f;
+}
+
+.sheet-section {
+  margin-top: 16px;
+}
+
+.sheet-section h3 {
+  font-size: 7.8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #79838f;
+  margin: 0 0 5px;
+}
+
+.sheet-prose {
+  white-space: pre-line;
+  font-size: 9.4pt;
+  color: #2c3540;
+}
+
+table.sheet-lines {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 9.4pt;
+}
+
+table.sheet-lines th {
+  text-align: left;
+  font-size: 7.8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  background: #16202e;
+  padding: 6px 8px;
+}
+
+table.sheet-lines th.num,
+table.sheet-lines td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+table.sheet-lines td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e2e6ec;
+  vertical-align: top;
+}
+
+table.sheet-lines tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.line-kind {
+  display: inline-block;
+  font-size: 7.4pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6a7484;
+  border: 1px solid #d5dbe4;
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-right: 5px;
+  vertical-align: 1px;
+}
+
+.line-part-number {
+  display: block;
+  font-size: 8.2pt;
+  color: #79838f;
+}
+
+.sheet-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 14px;
+  align-items: flex-start;
+}
+
+.sheet-payment {
+  flex: 1 1 auto;
+  font-size: 8.8pt;
+  color: #3b4552;
+  max-width: 92mm;
+}
+
+.sheet-payment .pay-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1px 12px;
+  margin-top: 3px;
+}
+
+.sheet-payment .pay-grid span:first-child {
+  color: #79838f;
+}
+
+.sheet-totals {
+  width: 74mm;
+  flex-shrink: 0;
+  font-size: 9.6pt;
+}
+
+.sheet-totals .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 3px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-totals .row.grand {
+  border-top: 2px solid #16202e;
+  margin-top: 5px;
+  padding-top: 7px;
+  font-size: 13pt;
+  font-weight: 800;
+  color: #16202e;
+}
+
+.sheet-totals .row.balance {
+  background: #fdf3dd;
+  padding: 5px 8px;
+  margin: 5px -8px 0;
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+.sheet-totals .row.settled {
+  color: #12805c;
+  font-weight: 700;
+}
+
+.sheet-terms {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e6ec;
+  font-size: 8.4pt;
+  color: #6a7484;
+  white-space: pre-line;
+}
+
+.sheet-signoff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+  margin-top: 20px;
+  font-size: 8.6pt;
+  color: #6a7484;
+}
+
+.sheet-signoff .sign-line {
+  border-bottom: 1px solid #9aa4b2;
+  height: 26px;
+  margin-bottom: 3px;
+}
+
+.sheet-footer-note {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 8.4pt;
+  color: #79838f;
+  white-space: pre-line;
+}
+
+/* ------------------------------------------------------------------ print */
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Everything that isn't the sheet goes away. */
+  .app-shell,
+  .sidebar,
+  .topbar,
+  .print-toolbar,
+  .scrim,
+  .no-print {
+    display: none !important;
+  }
+
+  .print-screen {
+    background: #ffffff;
+    padding: 0;
+    min-height: 0;
+  }
+
+  .sheet-wrap {
+    padding: 0;
+    display: block;
+  }
+
+  .sheet {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    font-size: 10pt;
+  }
+
+  .print-only {
+    display: revert;
+  }
+
+  table.sheet-lines {
+    page-break-inside: auto;
+  }
+
+  table.sheet-lines thead {
+    display: table-header-group;
+  }
+
+  table.sheet-lines tr {
+    page-break-inside: avoid;
+  }
+
+  .sheet-foot,
+  .sheet-signoff {
+    page-break-inside: avoid;
+  }
+
+  /* Keep the dark table header and yellow plate when printing. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
